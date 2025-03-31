@@ -39,7 +39,14 @@ def bounding_function(I_batch, zeta, device):
     min_I = torch.min(I_batch, dim=1, keepdim=True)[0]  # Get min across channels
     MAX = torch.max(min_I)
 
-    A1 = airlight(I_batch, 3)  # Estimate airlight
+
+
+    # Convert PyTorch tensor to NumPy before passing to airlight function
+    I_batch_np = I_batch.squeeze(0).permute(1, 2, 0).cpu().numpy()  # Convert (1, C, H, W) → (H, W, C)
+    
+    A1 = airlight(I_batch_np, 3)  # Now pass a NumPy array to airlight
+    A1 = torch.tensor(A1, device=device)  # Convert back to a PyTorch tensor
+
     A = torch.max(A1, dim=1, keepdim=True)[0]  # Max per image
 
     delta = zeta / (min_I.sqrt() + 1e-6)  # Prevent division by zero
