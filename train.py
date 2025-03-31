@@ -86,9 +86,23 @@ print('HazeNet loaded')
 i_net = DehazeFormer().to(device)
 # Load the checkpoint
 checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/INet/models/dehazeformer-t.pth"
-checkpoint = torch.load(checkpoint_path, map_location="cuda" if torch.cuda.is_available() else "cpu")
+#checkpoint = torch.load(checkpoint_path, map_location="cuda" if torch.cuda.is_available() else "cpu")
+import pickle
+# Load the data.pkl file
+with open('/home/student1/Desktop/Zero_Shot/zero-shot-SID/INet/models/dehazeformer-t.pth/archive/data.pkl', 'rb') as f:
+    data = pickle.load(f)
+# Check the contents of 'data' to understand its structure
+print(data)
+
+# If 'state_dict' is in the loaded data, you can load it into your model
+if 'state_dict' in data:
+    i_net.load_state_dict(data['state_dict'])
+else:
+    print("No state_dict found in the data.")
+
+
 # Load the model weights
-i_net.load_state_dict(checkpoint)
+#i_net.load_state_dict(checkpoint)
 i_net.train()
 
 optimizer = torch.optim.Adam(i_net.parameters(), lr=1e-4)
