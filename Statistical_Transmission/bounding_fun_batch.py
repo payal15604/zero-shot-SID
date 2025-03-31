@@ -18,7 +18,7 @@ def bounding_function(I_batch, zeta, device):
         trans_batch (torch.Tensor): Transmission maps (B, 1, H, W)
         A_batch (torch.Tensor): Atmospheric light per image (B, 1, 1, 1)
     """
-    print("I_batch shape before fix:", I_batch.shape)  
+    print("Initial I_batch shape:", I_batch.shape)  
 
     # Convert NumPy array to PyTorch tensor if needed
     if isinstance(I_batch, np.ndarray):
@@ -31,23 +31,23 @@ def bounding_function(I_batch, zeta, device):
     if I_batch.shape[-1] == 3:  
         I_batch = I_batch.permute(0, 3, 1, 2)  # Change (B, H, W, C) → (B, C, H, W)
     
-    print("I_batch shape after fix:", I_batch.shape)  
+    print("Fixed I_batch shape:", I_batch.shape)  
+    B, C, H, W = I_batch.shape  
 
-    B, C, H, W = I_batch.shape  # Now this should work
-
-    
-    min_I = torch.min(I_batch, dim=1, keepdim=True)[0]  # Get min across channels
+    min_I = torch.min(I_batch, dim=1, keepdim=True)[0]  
     MAX = torch.max(min_I)
 
+    # Compute airlight per image (Loop to handle batch processing)
+    A_list = []
+    for i in range(B):
+        img_np = I_batch[i].permute(1, 2, 0).cpu().numpy()  # Convert (C, H, W) → (H, W, C)
+        A_list.append(airlight(img_np, 3))
 
+    A1 = torch.tensor(A_list, device=device, dtype=torch.float32)  # Convert back to tensor
+    print("A1 shape:", A1.shape)  
 
-    # Convert PyTorch tensor to NumPy before passing to airlight function
-    I_batch_np = I_batch.squeeze(0).permute(1, 2, 0).cpu().numpy()  # Convert (1, C, H, W) → (H, W, C)
-    
-    A1 = airlight(I_batch_np, 3)  # Now pass a NumPy array to airlight
-    A1 = torch.tensor(A1, device=device)  # Convert back to a PyTorch tensor
-
-    A = torch.max(A1, dim=1, keepdim=True)[0]  # Max per image
+    # Fix shape for broadcasting
+    A = A1.view(B, 1, 1, 1)  
 
     delta = zeta / (min_I.sqrt() + 1e-6)  # Prevent division by zero
     est_tr_proposed = 1 / (1 + (MAX * 10 ** (-0.05 * delta)) / (A - min_I + 1e-6))
@@ -55,16 +55,20 @@ def bounding_function(I_batch, zeta, device):
     tr1 = (min_I >= A).float()
     tr2 = (min_I < A).float() * est_tr_proposed
     tr4 = tr1 * est_tr_proposed
+
+    # Ensure tr3_max is never zero
     tr3_max = torch.max(tr4, dim=[1, 2, 3], keepdim=True)[0]
-    tr3_max[tr3_max == 0] = 1  # Prevent division by zero
+    tr3_max = torch.clamp(tr3_max, min=1e-6)  # Prevent division by zero
     tr3 = tr4 / tr3_max
     est_tr_proposed = tr2 + tr3
 
-    # Apply morphological closing
-    est_tr_proposed = closing(est_tr_proposed.cpu().numpy(), footprint_rectangle((3, 3)))
-    est_tr_proposed = torch.tensor(est_tr_proposed, device=device)
+    # Apply morphological closing (Ensure proper dtype)
+    est_tr_np = est_tr_proposed.cpu().numpy()
+    est_tr_np = (est_tr_np * 255).astype(np.uint8)  # Convert to uint8 for morphology
+    est_tr_proposed = closing(est_tr_np, footprint_rectangle(3, 3))  
+    est_tr_proposed = torch.tensor(est_tr_proposed, device=device, dtype=torch.float32) / 255.0  # Normalize back
 
-    est_tr_proposed = cal_trans(I_batch, est_tr_proposed, 1, 0.5)  # Compute refined transmission
-    r = defog(I_batch, est_tr_proposed, A1, 0.9)  # Dehaze images
+    est_tr_proposed = cal_trans(I_batch, est_tr_proposed, 1, 0.5)  
+    r = defog(I_batch, est_tr_proposed, A, 0.9)  
 
-    return r, est_tr_proposed.unsqueeze(1), A.unsqueeze(1)
+    return r, est_tr_proposed.unsqueeze(1), A
