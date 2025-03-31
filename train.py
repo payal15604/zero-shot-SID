@@ -75,11 +75,24 @@ print('transform function loaded')
 dataset = HazeDataset(folder_path="../Gamma_Estimation/data/simu/", transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 print('Data Loader Loaded')
+
 # Initialize Haze-Net (Gamma Estimation)
 haze_net = BetaCNN().to(device)
 haze_net.load_state_dict(torch.load("../Gamma_Estimation/beta_cnn.pth"))
 haze_net.eval()
 print('HazeNet loaded')
+
+#Initialize DehazeFormer 
+i_net = DehazeFormer().to(device)
+# Load the checkpoint
+checkpoint_path = "INet/models/dehazeformer-t.pth"
+checkpoint = torch.load(checkpoint_path, map_location="cuda" if torch.cuda.is_available() else "cpu")
+# Load the model weights
+i_net.load_state_dict(checkpoint)
+i_net.train()
+
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+criterion = torch.nn.MSELoss()  # Example loss function
 
 # Training loop
 for epoch in range(epochs):
@@ -99,7 +112,7 @@ for epoch in range(epochs):
         t_power_gamma = torch.pow(transmission, gamma.view(-1, 1, 1, 1))
         A = estimate_atmospheric_light(hazy_img)
         print('Atmospheric Light: ', A)
-        J_haze_free = INet()(hazy_img)  # Pass through INet
+        J_haze_free = i_net(hazy_img)  # Pass through INet
 
         # Compute reconstructed hazy image
         reconstructed_hazy = A * (1 - t_power_gamma) + t_power_gamma * J_haze_free
