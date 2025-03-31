@@ -89,7 +89,7 @@ checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/INet/models/de
 #checkpoint = torch.load(checkpoint_path, map_location="cuda" if torch.cuda.is_available() else "cpu")
 import pickle
 # Load the data.pkl file
-with open('/home/student1/Desktop/Zero_Shot/zero-shot-SID/INet/models/dehazeformer-t.pth/archive/data.pkl', 'rb') as f:
+with open('INet/models/dehazeformer-t.pth/archive/data.pkl', 'rb') as f:
     data = pickle.load(f)
 # Check the contents of 'data' to understand its structure
 print(data)
