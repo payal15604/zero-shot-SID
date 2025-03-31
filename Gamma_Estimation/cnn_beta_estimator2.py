@@ -26,7 +26,7 @@ class BetaCNN(nn.Module):
             nn.MaxPool2d(2, 2),
         )
         self.fc = nn.Sequential(
-            nn.Linear(128 * 16 * 16, 256),  # Adjusted size
+            nn.Linear(128 * 32 * 32, 256),  # Adjusted size
             nn.ReLU(),
             nn.Linear(256, 1)  # Output β
         )
