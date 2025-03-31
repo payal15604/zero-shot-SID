@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
+import numpy as np
 #from model import HazeNet, INet
 from dataset import HazeDataset
 from pytorch_msssim import ssim
