@@ -75,7 +75,7 @@ for epoch in range(epochs):
 
         with torch.no_grad():
             gamma = haze_net(hazy_img)
-
+            print('Gamma: ', gamma)
         transmission = compute_transmission(hazy_img)
         t_power_gamma = torch.pow(transmission, gamma)
         A = estimate_atmospheric_light(hazy_img)
