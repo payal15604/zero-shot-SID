@@ -18,7 +18,9 @@ def bounding_function(I_batch, zeta, device):
         trans_batch (torch.Tensor): Transmission maps (B, 1, H, W)
         A_batch (torch.Tensor): Atmospheric light per image (B, 1, 1, 1)
     """
+    print("I_batch shape:", I_batch.shape)
     B, C, H, W = I_batch.shape
+    
     min_I = torch.min(I_batch, dim=1, keepdim=True)[0]  # Get min across channels
     MAX = torch.max(min_I)
 
