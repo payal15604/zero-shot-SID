@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 #from model import HazeNet, INet
 from dataset import HazeDataset
 from pytorch_msssim import ssim
-from Statistical_Transmission.bounding_fun import bounding_function
+from Statistical_Transmission.bounding_fun_batch import bounding_function
 from Gamma_Estimation.cnn_beta_estimator2 import BetaCNN
 from utils import DarkChannel, AtmLight  # Import utility functions
 
