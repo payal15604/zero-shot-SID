@@ -12,19 +12,34 @@ from Gamma_Estimation.cnn_beta_estimator2 import BetaCNN
 from utils import DarkChannel, AtmLight  # Import utility functions
 
 # Compute transmission function
-def compute_transmission(hazy_img):
-    """Compute transmission for a batch of images."""
-    print('Inside Compute Transmission')
-    hazy_np = (hazy_img.permute(0, 2, 3, 1).cpu().numpy() * 255).astype(np.uint8)
-    zeta = 1
+# def compute_transmission(hazy_img):
+#     """Compute transmission for a batch of images."""
+#     print('Inside Compute Transmission')
+#     hazy_np = (hazy_img.permute(0, 2, 3, 1).cpu().numpy() * 255).astype(np.uint8)
+#     zeta = 1
 
-    batch_transmission = []
-    for img in hazy_np:
-        _, transmission, _ = bounding_function(img, zeta, device)
-        batch_transmission.append(transmission)
+#     batch_transmission = []
+#     for img in hazy_np:
+#         _, transmission, _ = bounding_function(img, zeta, device)
+#         batch_transmission.append(transmission)
 
-    transmission_tensor = torch.tensor(batch_transmission, dtype=torch.float32, device=hazy_img.device)
-    return transmission_tensor.unsqueeze(1)  # Shape: (B, 1, H, W)
+#     transmission_tensor = torch.tensor(batch_transmission, dtype=torch.float32, device=hazy_img.device)
+#     return transmission_tensor.unsqueeze(1)  # Shape: (B, 1, H, W)
+
+def compute_transmission(hazy_img, device):
+    """Compute transmission for a single image."""
+    print("Inside Compute Transmission")
+    
+    # Convert PyTorch tensor to NumPy array
+    hazy_np = (hazy_img.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)  
+
+    zeta = 1  # Processing parameter
+    _, transmission, _ = bounding_function(hazy_np, zeta)
+
+    # Convert transmission back to a PyTorch tensor
+    transmission_tensor = torch.tensor(transmission, dtype=torch.float32, device=device).unsqueeze(0)  # Shape: (1, H, W)
+    
+    return transmission_tensor  # Shape: (1, H, W)
 
 # Atmospheric light estimation function
 def estimate_atmospheric_light(hazy_img):
