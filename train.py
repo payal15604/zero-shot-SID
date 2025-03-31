@@ -91,7 +91,7 @@ checkpoint = torch.load(checkpoint_path, map_location="cuda" if torch.cuda.is_av
 i_net.load_state_dict(checkpoint)
 i_net.train()
 
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+optimizer = torch.optim.Adam(i_net.parameters(), lr=1e-4)
 criterion = torch.nn.MSELoss()  # Example loss function
 
 # Training loop
