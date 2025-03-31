@@ -94,7 +94,8 @@ for epoch in range(epochs):
             gamma = haze_net(hazy_img)
             print('Gamma: ', gamma)
         transmission = compute_transmission(hazy_img, device)
-        t_power_gamma = torch.pow(transmission, gamma)
+        # t_power_gamma = torch.pow(transmission, gamma)
+        t_power_gamma = torch.pow(transmission, gamma.view(-1, 1, 1, 1))
         A = estimate_atmospheric_light(hazy_img)
 
         J_haze_free = INet()(hazy_img)  # Pass through INet
