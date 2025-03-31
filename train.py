@@ -10,7 +10,7 @@ from pytorch_msssim import ssim
 from Statistical_Transmission.bounding_fun import bounding_function
 from Gamma_Estimation.cnn_beta_estimator2 import BetaCNN
 from utils import DarkChannel, AtmLight  # Import utility functions
-from INet import models.dehazeformer
+from INet.models.dehazeformer import DehazeFormer
 
 # Compute transmission function
 # def compute_transmission(hazy_img):
