@@ -18,8 +18,18 @@ def bounding_function(I_batch, zeta, device):
         trans_batch (torch.Tensor): Transmission maps (B, 1, H, W)
         A_batch (torch.Tensor): Atmospheric light per image (B, 1, 1, 1)
     """
-    print("I_batch shape:", I_batch.shape)
-    B, C, H, W = I_batch.shape
+    print("I_batch shape before fix:", I_batch.shape)  
+
+    if len(I_batch.shape) == 3:  
+        I_batch = I_batch.unsqueeze(0)  # Add batch dimension (1, H, W, C)
+    
+    if I_batch.shape[-1] == 3:  
+        I_batch = I_batch.permute(0, 3, 1, 2)  # Change (B, H, W, C) → (B, C, H, W)
+    
+    print("I_batch shape after fix:", I_batch.shape)  
+    
+    B, C, H, W = I_batch.shape  # Now this should work
+
     
     min_I = torch.min(I_batch, dim=1, keepdim=True)[0]  # Get min across channels
     MAX = torch.max(min_I)
