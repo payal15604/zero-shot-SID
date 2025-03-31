@@ -87,6 +87,7 @@ for epoch in range(epochs):
 
     for hazy_img in dataloader:
         hazy_img = hazy_img.to(device)
+        print('Image of Hazy Image: ', np.shape(hazy_img))
 
         with torch.no_grad():
             gamma = haze_net(hazy_img)
