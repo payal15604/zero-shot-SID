@@ -5,11 +5,13 @@ import numpy as np
 from torch.utils.data import Dataset
 
 class HazeDataset(Dataset):
-    def __init__(self, folder_path, img_size=(256, 256)):
+    def __init__(self, folder_path, img_size=(256, 256), transform = None):
         """Initialize dataset, loading image paths only (lazy loading)."""
         self.folder_path = folder_path
         self.img_size = img_size
+        self.transform = transform
         self.image_paths = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith(('.png', '.jpg', '.jpeg'))]
+
 
     def __len__(self):
         return len(self.image_paths)
