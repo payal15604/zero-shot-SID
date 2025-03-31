@@ -59,12 +59,15 @@ dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 print('Data Loader Loaded')
 # Initialize Haze-Net (Gamma Estimation)
 haze_net = BetaCNN().to(device)
-haze_net.load_state_dict(torch.load("Gamma_Estimation/beta_cnn.pth"))
+haze_net.load_state_dict(torch.load("../Gamma_Estimation/beta_cnn.pth"))
 haze_net.eval()
+print('HazeNet loaded')
 
 # Training loop
 for epoch in range(epochs):
     epoch_loss = 0
+
+    print('epoch: ', epoch)
 
     for hazy_img in dataloader:
         hazy_img = hazy_img.to(device)
