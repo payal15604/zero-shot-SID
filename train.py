@@ -85,7 +85,7 @@ print('HazeNet loaded')
 #Initialize DehazeFormer 
 i_net = DehazeFormer().to(device)
 # Load the checkpoint
-checkpoint_path = "../INet/models/dehazeformer-t.pth"
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/INet/models/dehazeformer-t.pth"
 checkpoint = torch.load(checkpoint_path, map_location="cuda" if torch.cuda.is_available() else "cpu")
 # Load the model weights
 i_net.load_state_dict(checkpoint)
