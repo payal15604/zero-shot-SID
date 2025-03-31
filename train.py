@@ -54,7 +54,7 @@ transform = transforms.Compose([
 ])
 print('transform function loaded')
 
-dataset = HazeDataset(folder_path="data/", transform=transform)
+dataset = HazeDataset(folder_path="../Gamma_Estimation/data/simu/", transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 print('Data Loader Loaded')
 # Initialize Haze-Net (Gamma Estimation)
