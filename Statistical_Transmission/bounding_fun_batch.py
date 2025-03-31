@@ -2,9 +2,9 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from skimage.morphology import closing, footprint_rectangle
-from airlight import airlight
-from cal_transmission import cal_trans
-from defog import defog
+from .airlight import airlight
+from .cal_transmission import cal_trans
+from .defog import defog
 
 def bounding_function(I_batch, zeta, device):
     """
