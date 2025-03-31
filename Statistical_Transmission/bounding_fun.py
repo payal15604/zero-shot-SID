@@ -1,8 +1,8 @@
 import numpy as np
 from skimage.morphology import square, closing
 from .airlight import airlight
-from cal_transmission import cal_trans
-from defog import defog
+from .cal_transmission import cal_trans
+from .defog import defog
 from skimage.morphology import footprint_rectangle, closing
 import cv2
 
