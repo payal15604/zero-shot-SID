@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 
-class HazyDataset(Dataset):
+class HazeDataset(Dataset):
     def __init__(self, folder_path, img_size=(256, 256)):
         """Initialize dataset, loading image paths only (lazy loading)."""
         self.folder_path = folder_path
