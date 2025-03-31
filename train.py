@@ -27,20 +27,21 @@ from utils import DarkChannel, AtmLight  # Import utility functions
 #     return transmission_tensor.unsqueeze(1)  # Shape: (B, 1, H, W)
 
 def compute_transmission(hazy_img, device):
-    """Compute transmission for a single image."""
-    print("Inside Compute Transmission")
+    """Compute transmission for a batch of images by processing one image at a time."""
+    print('Inside Compute Transmission')
+    batch_size = hazy_img.shape[0]  # Get batch size
+    transmission_list = []
+
+    for i in range(batch_size):
+        img = hazy_img[i].permute(1, 2, 0).cpu().numpy()  # Convert to (H, W, C)
+        img = (img * 255).astype(np.uint8)  # Convert to uint8
+        _, transmission, _ = bounding_function(img, zeta=1)
+        transmission_list.append(transmission)
+
+    # Convert list to tensor and move to device
+    transmission_tensor = torch.tensor(np.stack(transmission_list), dtype=torch.float32, device=device)
     
-    # Convert PyTorch tensor to NumPy array
-    hazy_np = (hazy_img.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)  
-
-    zeta = 1  # Processing parameter
-    _, transmission, _ = bounding_function(hazy_np, zeta)
-
-    # Convert transmission back to a PyTorch tensor
-    transmission_tensor = torch.tensor(transmission, dtype=torch.float32, device=device).unsqueeze(0)  # Shape: (1, H, W)
-    
-    return transmission_tensor  # Shape: (1, H, W)
-
+    return transmission_tensor.unsqueeze(1)  # Shape: (B, 1, H, W)
 # Atmospheric light estimation function
 def estimate_atmospheric_light(hazy_img):
     """Estimate atmospheric light for a batch."""
