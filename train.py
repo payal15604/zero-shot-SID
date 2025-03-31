@@ -49,7 +49,7 @@ epochs = 50
 
 # Data preparation
 transform = transforms.Compose([
-    transforms.Resize((64, 64)),
+    transforms.Resize((128, 128)),
     transforms.ToTensor()
 ])
 print('transform function loaded')
