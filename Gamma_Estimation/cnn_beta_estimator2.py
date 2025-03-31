@@ -23,9 +23,10 @@ class BetaCNN(nn.Module):
             nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2, 2),  # 64x64 -> 32x32
+            nn.MaxPool2d(2, 2),
         )
         self.fc = nn.Sequential(
-            nn.Linear(128 * 32 * 32, 256),  # Adjusted size
+            nn.Linear(128 * 16 * 16, 256),  # Adjusted size
             nn.ReLU(),
             nn.Linear(256, 1)  # Output β
         )
