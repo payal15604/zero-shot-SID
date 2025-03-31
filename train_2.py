@@ -106,12 +106,12 @@ import pickle
 # else:
 #     print("No state_dict found in the data.")
 # Load the data.pkl file
-with open('INet/models/dehazeformer-t.pth/archive/data.pkl', 'rb') as f:
-    data = pickle.load(f)
-if 'state_dict' in data:
-    i_net.load_state_dict(data['state_dict'])
-else:
-    print("No state_dict found in the data.")
+# with open('INet/models/dehazeformer-t.pth/archive/data.pkl', 'rb') as f:
+#     data = pickle.load(f)
+# if 'state_dict' in data:
+#     i_net.load_state_dict(data['state_dict'])
+# else:
+#     print("No state_dict found in the data.")
 
 
 
