@@ -13,6 +13,7 @@ from utils import DarkChannel, AtmLight  # Import utility functions
 # Compute transmission function
 def compute_transmission(hazy_img):
     """Compute transmission for a batch of images."""
+    print('Inside Compute Transmission')
     hazy_np = (hazy_img.permute(0, 2, 3, 1).cpu().numpy() * 255).astype(np.uint8)
     zeta = 1
 
@@ -27,6 +28,7 @@ def compute_transmission(hazy_img):
 # Atmospheric light estimation function
 def estimate_atmospheric_light(hazy_img):
     """Estimate atmospheric light for a batch."""
+    print('Inside Estimate Atmospheric Light')
     hazy_np = (hazy_img.permute(0, 2, 3, 1).cpu().numpy() * 255).astype(np.uint8)
 
     batch_A = []
@@ -40,6 +42,7 @@ def estimate_atmospheric_light(hazy_img):
 
 # Hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print('GPU: ', device)
 learning_rate = 1e-4
 batch_size = 16
 epochs = 50
@@ -49,10 +52,11 @@ transform = transforms.Compose([
     transforms.Resize((256, 256)),
     transforms.ToTensor()
 ])
+print('transform function loaded')
 
-dataset = HazeDataset(root="data/", transform=transform)
+dataset = HazeDataset(folder_path="data/", transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
+print('Data Loader Loaded')
 # Initialize Haze-Net (Gamma Estimation)
 haze_net = BetaCNN().to(device)
 haze_net.load_state_dict(torch.load("Gamma_Estimation/beta_cnn.pth"))
