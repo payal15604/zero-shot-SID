@@ -23,7 +23,7 @@ class BetaCNN(nn.Module):
             nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2, 2),  # 64x64 -> 32x32
-            nn.MaxPool2d(2, 2), #added for shape error, wasnt in original trained model 
+            #nn.MaxPool2d(2, 2), #added for shape error, wasnt in original trained model 
         )
         self.fc = nn.Sequential(
             nn.Linear(128 * 32 * 32, 256),  # Adjusted size
