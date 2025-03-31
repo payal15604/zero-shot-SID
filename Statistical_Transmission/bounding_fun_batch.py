@@ -20,6 +20,11 @@ def bounding_function(I_batch, zeta, device):
     """
     print("I_batch shape before fix:", I_batch.shape)  
 
+    # Convert NumPy array to PyTorch tensor if needed
+    if isinstance(I_batch, np.ndarray):
+        I_batch = torch.tensor(I_batch, dtype=torch.float32, device=device) 
+
+    # Ensure correct shape (B, C, H, W)
     if len(I_batch.shape) == 3:  
         I_batch = I_batch.unsqueeze(0)  # Add batch dimension (1, H, W, C)
     
@@ -27,7 +32,7 @@ def bounding_function(I_batch, zeta, device):
         I_batch = I_batch.permute(0, 3, 1, 2)  # Change (B, H, W, C) → (B, C, H, W)
     
     print("I_batch shape after fix:", I_batch.shape)  
-    
+
     B, C, H, W = I_batch.shape  # Now this should work
 
     
