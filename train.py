@@ -20,7 +20,7 @@ def compute_transmission(hazy_img):
 
     batch_transmission = []
     for img in hazy_np:
-        _, transmission, _ = bounding_function(img, zeta)
+        _, transmission, _ = bounding_function(img, zeta, device)
         batch_transmission.append(transmission)
 
     transmission_tensor = torch.tensor(batch_transmission, dtype=torch.float32, device=hazy_img.device)
