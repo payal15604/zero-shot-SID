@@ -30,11 +30,20 @@ class BetaCNN(nn.Module):
             nn.Linear(256, 1)  # Output β
         )
 
+    # def forward(self, x):
+    #     x = self.conv(x)
+    #     x = x.view(x.size(0), -1)  # Flatten dynamically
+    #     x = self.fc(x)
+    #     return x.squeeze()  # Ensure correct shape
+
     def forward(self, x):
-        x = self.conv(x)
-        x = x.view(x.size(0), -1)  # Flatten dynamically
-        x = self.fc(x)
-        return x.squeeze()  # Ensure correct shape
+    x = self.conv(x)
+    print("Feature map shape before FC:", x.shape)  # Debugging
+    x = x.view(x.size(0), -1)  # Flatten dynamically
+    print("Flattened shape:", x.shape)  # Debugging
+    x = self.fc(x)
+    return x.squeeze()
+
 
 # Dataset Class
 class BetaDataset(Dataset):
