@@ -62,7 +62,7 @@ def estimate_atmospheric_light(hazy_img):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('GPU: ', device)
 learning_rate = 1e-4
-batch_size = 16
+batch_size = 1
 epochs = 50
 
 # Data preparation
@@ -129,6 +129,7 @@ for epoch in range(epochs):
     print('epoch: ', epoch)
 
     for hazy_img in dataloader:
+        print('epoch: ', epoch)
         hazy_img = hazy_img.to(device)
         print('Image of Hazy Image: ', np.shape(hazy_img))
 
@@ -139,7 +140,12 @@ for epoch in range(epochs):
         # t_power_gamma = torch.pow(transmission, gamma)
         t_power_gamma = torch.pow(transmission, gamma.view(-1, 1, 1, 1))
         A = estimate_atmospheric_light(hazy_img)
-        print('Atmospheric Light: ', A)
+        print('Atmospheric Light Old: ', A)
+        A = A.squeeze()  # Remove extra dimensions
+        A = A.view(-1, 3, 1, 1)  # Ensure correct shape (batch_size, 3, 1, 1)
+        print('Atmospheric Light New: ', A)
+        print(np.shape(A))
+	
         J_haze_free = i_net(hazy_img)  # Pass through INet
 
         # Compute reconstructed hazy image
