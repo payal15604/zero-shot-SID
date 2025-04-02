@@ -63,7 +63,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('GPU: ', device)
 learning_rate = 1e-4
 batch_size = 16
-epochs = 50
+epochs = 2
 
 # Data preparation
 transform = transforms.Compose([
@@ -152,3 +152,8 @@ for epoch in range(epochs):
     print(f"Epoch [{epoch+1}/{epochs}], Loss: {epoch_loss/len(dataloader):.4f}")
 
 print("Training complete!")
+
+# Save the trained model
+model_path = "dehazeformer_trained.pth"
+torch.save(i_net.state_dict(), model_path)
+print(f"Model saved to {model_path}")
