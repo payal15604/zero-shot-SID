@@ -29,7 +29,7 @@ from INet.models.dehazeformer import DehazeFormer
 
 def compute_transmission(hazy_img, device):
     """Compute transmission for a batch of images by processing one image at a time."""
-    print('Inside Compute Transmission')
+    #print('Inside Compute Transmission')
     batch_size = hazy_img.shape[0]  # Get batch size
     transmission_list = []
 
@@ -46,7 +46,7 @@ def compute_transmission(hazy_img, device):
 # Atmospheric light estimation function
 def estimate_atmospheric_light(hazy_img):
     """Estimate atmospheric light for a batch."""
-    print('Inside Estimate Atmospheric Light')
+    #print('Inside Estimate Atmospheric Light')
     hazy_np = (hazy_img.permute(0, 2, 3, 1).cpu().numpy() * 255).astype(np.uint8)
 
     batch_A = []
@@ -61,26 +61,26 @@ def estimate_atmospheric_light(hazy_img):
 # Hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('GPU: ', device)
-learning_rate = 1e-4
-batch_size = 1
-epochs = 50
+learning_rate = 0.2
+batch_size = 2
+epochs = 100
 
 # Data preparation
 transform = transforms.Compose([
     transforms.Resize((128, 128)),
     transforms.ToTensor()
 ])
-print('transform function loaded')
+#print('transform function loaded')
 
 dataset = HazeDataset(folder_path="../Gamma_Estimation/data/simu/", transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-print('Data Loader Loaded')
+#print('Data Loader Loaded')
 
 # Initialize Haze-Net (Gamma Estimation)
 haze_net = BetaCNN().to(device)
 haze_net.load_state_dict(torch.load("../Gamma_Estimation/beta_cnn.pth"))
 haze_net.eval()
-print('HazeNet loaded')
+#print('HazeNet loaded')
 
 #Initialize DehazeFormer 
 i_net = DehazeFormer().to(device)
@@ -119,8 +119,8 @@ import pickle
 #i_net.load_state_dict(checkpoint)
 i_net.train()
 
-optimizer = torch.optim.Adam(i_net.parameters(), lr=1e-4)
-criterion = torch.nn.MSELoss()  # Example loss function
+#optimizer = torch.optim.SGD(i_net.parameters(), lr=0.1)
+#criterion = torch.nn.MSELoss()  # Example loss function
 
 # Training loop
 for epoch in range(epochs):
@@ -129,22 +129,22 @@ for epoch in range(epochs):
     print('epoch: ', epoch)
 
     for hazy_img in dataloader:
-        print('epoch: ', epoch)
+        #print('epoch: ', epoch)
         hazy_img = hazy_img.to(device)
-        print('Image of Hazy Image: ', np.shape(hazy_img))
+        #print('Image of Hazy Image: ', np.shape(hazy_img))
 
         with torch.no_grad():
             gamma = haze_net(hazy_img)
-            print('Gamma: ', gamma)
+            #print('Gamma: ', gamma)
         transmission = compute_transmission(hazy_img, device)
         # t_power_gamma = torch.pow(transmission, gamma)
         t_power_gamma = torch.pow(transmission, gamma.view(-1, 1, 1, 1))
         A = estimate_atmospheric_light(hazy_img)
-        print('Atmospheric Light Old: ', A)
+        #print('Atmospheric Light Old: ', A)
         A = A.squeeze()  # Remove extra dimensions
         A = A.view(-1, 3, 1, 1)  # Ensure correct shape (batch_size, 3, 1, 1)
-        print('Atmospheric Light New: ', A)
-        print(np.shape(A))
+        #print('Atmospheric Light New: ', A)
+        #print(np.shape(A))
 	
         J_haze_free = i_net(hazy_img)  # Pass through INet
 
@@ -156,5 +156,8 @@ for epoch in range(epochs):
         epoch_loss += loss.item()
 
     print(f"Epoch [{epoch+1}/{epochs}], Loss: {epoch_loss/len(dataloader):.4f}")
-
+# Save the trained model
+model_path = "dehazeformer_trained.pth"
+torch.save(i_net.state_dict(), model_path)
+print(f"Model saved to {model_path}")
 print("Training complete!")
