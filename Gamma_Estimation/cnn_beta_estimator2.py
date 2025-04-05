@@ -39,9 +39,9 @@ class BetaCNN(nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
-        print("Feature map shape before FC:", x.shape)  # Debugging
+        #print("Feature map shape before FC:", x.shape)  # Debugging
         x = x.view(x.size(0), -1)  # Flatten dynamically
-        print("Flattened shape:", x.shape)  # Debugging
+        #print("Flattened shape:", x.shape)  # Debugging
         x = self.fc(x)
         return x.squeeze()
 

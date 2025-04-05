@@ -15,18 +15,19 @@ def defog(HazeImg, t, A, delta):
     R = (HazeImg[..., 0] - A[0]) / t + A[0]
     G = (HazeImg[..., 1] - A[1]) / t + A[1]
     B = (HazeImg[..., 2] - A[2]) / t + A[2]
-    print("before clipping r -> ", np.max(R), np.min(R))
+    #print("before clipping r -> ", np.max(R), np.min(R))
     
     # Clamp each channel between 0 and 1.
     R = np.clip(R, 0, 1)
     G = np.clip(G, 0, 1)
     B = np.clip(B, 0, 1)
+    '''
     print("after clipping R -> ", np.max(R), np.min(R))
     print("after clipping G -> ", np.max(G), np.min(G))
     print("after clipping B -> ", np.max(B), np.min(B))
     
     print("B -> ",B)
-    
+    '''
     # Stack the channels back into a 3D image.
     rImg = np.stack((R, G, B), axis=-1)
     return rImg
