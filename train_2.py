@@ -124,7 +124,7 @@ print('GPU: ', device)
 lr = 1e-3
 
 batch_size = 4
-epochs = 1000
+epochs = 3000
 
 
 # Data preparation

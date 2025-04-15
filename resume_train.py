@@ -4,7 +4,7 @@ from train_2 import i_net, optimizer, dataloader, haze_net, compute_transmission
 from pytorch_msssim import ssim
 
 # Configuration for resuming
-resume_checkpoint_path = "dehazeformer_trained_1000_1e-3.pth"
+resume_checkpoint_path = "dehazeCOPY.pth"
 start_epoch = 1000
 total_epochs = 1500
 new_learning_rate = 0.01  # ⬅️ Your custom LR
