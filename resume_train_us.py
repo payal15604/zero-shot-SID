@@ -123,8 +123,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('GPU: ', device)
 lr = 1e-3
 batch_size = 4
-epochs = 1000
+# Temporarily
+epochs = 2
 
+# Then run the script
 # Data preparation
 transform = transforms.Compose([
     transforms.Resize((128, 128)),
@@ -148,7 +150,8 @@ optimizer = torch.optim.SGD(i_net.parameters(), lr)
 start_epoch = 0
 
 # Check for existing checkpoint to resume training
-checkpoint_path = "dehazeformer_trained_1000_1e-3.pth" # Path to latest checkpoint
+#TEMPORARY
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_3.pth" # Path to latest checkpoint
 if os.path.exists(checkpoint_path):
     print("Loading checkpoint to resume training...")
     checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -213,7 +216,7 @@ for epoch in range(start_epoch, epochs):
         print(f"Checkpoint saved to {model_path}")
 
 # Final save
-final_model_path = "dehazeformer_trained_1000_1e-3.pth"
+final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_3.pth"
 torch.save({
     'epoch': epochs - 1,
     'model_state_dict': i_net.state_dict(),
