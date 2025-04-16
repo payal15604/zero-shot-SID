@@ -176,7 +176,7 @@ criterion = torch.nn.MSELoss()
 
 for epoch in range(start_epoch, epochs):
     epoch_loss = 0
-    print(f"Epoch: {epoch + 1}")
+    print(f"Epoch: {epoch + 1} of {epochs}")
 
     for idx, hazy_img in enumerate(dataloader):
         hazy_img = hazy_img.to(device)
