@@ -123,9 +123,9 @@ def estimate_atmospheric_light(hazy_img):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('GPU: ', device)
 lr = 1e-3
-batch_size = 4
+batch_size = 8
 # Temporarily
-epochs = 2
+epochs = 1500
 
 # Then run the script
 # Data preparation
@@ -152,7 +152,7 @@ start_epoch = 0
 
 # Check for existing checkpoint to resume training
 #TEMPORARY
-checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_3.pth" # Path to latest checkpoint
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_3000.pth" # Path to latest checkpoint
 if os.path.exists(checkpoint_path):
     print("Loading checkpoint to resume training...")
     checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -191,7 +191,7 @@ for epoch in range(start_epoch, epochs):
         reconstructed_hazy = A * (1 - t_power_gamma) + t_power_gamma * J_haze_free
         reconstructed_hazy = torch.clamp(reconstructed_hazy, 0, 1)
 
-        # Calculate losses
+        # Calculate losses\
         mse_loss = criterion(reconstructed_hazy, hazy_img)
         ssim_loss = 1 - ssim(reconstructed_hazy, hazy_img, data_range=1.0, size_average=True)
         loss = mse_loss + ssim_loss
@@ -217,7 +217,7 @@ for epoch in range(start_epoch, epochs):
         print(f"Checkpoint saved to {model_path}")
 
 # Final save
-final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_3.pth"
+final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_1500.pth"
 torch.save({
     'epoch': epochs - 1,
     'model_state_dict': i_net.state_dict(),
