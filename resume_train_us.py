@@ -122,10 +122,10 @@ def estimate_atmospheric_light(hazy_img):
 # Hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('GPU: ', device)
-lr = 1e-4
+lr = 1e-6
 batch_size = 8
 # Temporarily
-epochs = 2000
+epochs = 2500
 
 # Then run the script
 # Data preparation
@@ -152,7 +152,7 @@ start_epoch = 0
 
 # Check for existing checkpoint to resume training
 #TEMPORARY
-checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_1500.pth" # Path to latest checkpoint
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_1800.pth" # Path to latest checkpoint
 if os.path.exists(checkpoint_path):
     print("Loading checkpoint to resume training...")
     checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -217,7 +217,7 @@ for epoch in range(start_epoch, epochs):
         print(f"Checkpoint saved to {model_path}")
 
 # Final save
-final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_2000.pth"
+final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_2500.pth"
 torch.save({
     'epoch': epochs - 1,
     'model_state_dict': i_net.state_dict(),
