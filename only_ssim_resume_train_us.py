@@ -138,7 +138,7 @@ for epoch in range(start_epoch, epochs):
 
     # Save checkpoint every 100 epochs and at the end
     if (epoch + 1) % 100 == 0 or (epoch + 1) == epochs:
-        model_path = f"combined_dataset_model_epoch_{epoch + 1}_ssim.pth"
+        model_path = f"/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model_epoch_{epoch + 1}_ssim.pth"
         torch.save({
             'epoch': epoch,
             'model_state_dict': i_net.state_dict(),
