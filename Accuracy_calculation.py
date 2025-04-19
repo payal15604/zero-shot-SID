@@ -2,7 +2,6 @@ import torch
 import numpy as np
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from sklearn.metrics import mean_squared_error
 from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 from skimage.metrics import structural_similarity as compare_ssim
 from dataset import HazeDataset  # Assuming you have a dataset class
@@ -33,7 +32,6 @@ model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()  # Set the model to evaluation mode
 
 # Define loss and accuracy calculation
-mse_sum = 0
 psnr_sum = 0
 ssim_sum = 0
 n = len(train_dl)  # Total number of batches
@@ -51,8 +49,6 @@ with torch.no_grad():
         output_np = output.squeeze(0).cpu().permute(1, 2, 0).numpy()
         clean_np = clean.squeeze(0).cpu().permute(1, 2, 0).numpy()
 
-        # MSE
-        mse = np.mean((output_np - clean_np)**2)
         # PSNR
         psnr = compare_psnr(clean_np, output_np, data_range=1.0)
         # SSIM (multichannel=True for color)
@@ -63,10 +59,8 @@ with torch.no_grad():
         ssim_sum += ssim
 
 # Calculate average MSE, PSNR, and SSIM
-avg_mse = mse_sum / n
 avg_psnr = psnr_sum / n
 avg_ssim = ssim_sum / n
 
-print(f"Avg MSE: {avg_mse:.6f}")
 print(f"Avg PSNR: {avg_psnr:.2f} dB")
 print(f"Avg SSIM: {avg_ssim:.4f}")
