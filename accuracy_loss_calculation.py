@@ -1,50 +1,72 @@
-from torch.utils.data import DataLoader
-from torchvision import transforms
-from dataset import HazeDataset
+import torch
 import numpy as np
+from torchvision import transforms
+from torch.utils.data import DataLoader
+from sklearn.metrics import mean_squared_error
 from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 from skimage.metrics import structural_similarity as compare_ssim
+from dataset import HazeDataset  # Assuming you have a dataset class
+from model import DehazeFormer  # Assuming the model class
 
-import torch
-from INet.models.dehazeformer import DehazeFormer
-
+# Hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = DehazeFormer().to(device)
-ckpt = torch.load("dehazeformer_trained_2100.pth", map_location=device)
-model.load_state_dict(ckpt["model_state_dict"])
-model.eval()
+lr = 1e-6
+batch_size = 8
 
-# create a DataLoader for your test set
-test_ds = HazeDataset(folder_path="../Gamma_Estimation/data/simu/", transform=transforms.Compose([transforms.Resize((128,128)), transforms.ToTensor()]))
-test_dl = DataLoader(test_ds, batch_size=1, shuffle=False)
+# Load the dataset
+transform = transforms.Compose([
+    transforms.Resize((128, 128)),
+    transforms.ToTensor()
+])
 
-mse_sum = 0.0
-psnr_sum = 0.0
-ssim_sum = 0.0
-n = len(test_dl)
+# Load your training dataset (use the correct path)
+dataset = HazeDataset(folder_path="../Gamma_Estimation/data/simu/", transform=transform)
+train_dl = DataLoader(dataset, batch_size=batch_size, shuffle=False)  # No shuffle for testing
 
+# Load the saved model
+checkpoint_path = "//home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_2100.pth"  # Path to your final model checkpoint
+checkpoint = torch.load(checkpoint_path, map_location=device)
+model = DehazeFormer().to(device)  # Initialize the model
+
+# Load the model state dict
+model.load_state_dict(checkpoint['model_state_dict'])
+model.eval()  # Set the model to evaluation mode
+
+# Define loss and accuracy calculation
+mse_sum = 0
+psnr_sum = 0
+ssim_sum = 0
+n = len(train_dl)  # Total number of batches
+
+# Compute loss and accuracy for training data
 with torch.no_grad():
-    for hazy, clean in test_dl:
+    for hazy, clean in train_dl:
         hazy = hazy.to(device)
         clean = clean.to(device)
 
-        pred = model(hazy).clamp(0,1)
+        # Forward pass
+        output = model(hazy)
 
-        # move to CPU numpy HWC [0,1]
-        pred_np  = pred.squeeze(0).cpu().permute(1,2,0).numpy()
-        clean_np = clean.squeeze(0).cpu().permute(1,2,0).numpy()
+        # Convert output and clean to numpy arrays for evaluation
+        output_np = output.squeeze(0).cpu().permute(1, 2, 0).numpy()
+        clean_np = clean.squeeze(0).cpu().permute(1, 2, 0).numpy()
 
         # MSE
-        mse = np.mean((pred_np - clean_np)**2)
+        mse = np.mean((output_np - clean_np)**2)
         # PSNR
-        psnr = compare_psnr(clean_np, pred_np, data_range=1.0)
+        psnr = compare_psnr(clean_np, output_np, data_range=1.0)
         # SSIM (multichannel=True for color)
-        ssim = compare_ssim(clean_np, pred_np, data_range=1.0, multichannel=True)
+        ssim = compare_ssim(clean_np, output_np, data_range=1.0, multichannel=True)
 
-        mse_sum  += mse
+        mse_sum += mse
         psnr_sum += psnr
         ssim_sum += ssim
 
-print(f"Avg MSE : {mse_sum/n:.6f}")
-print(f"Avg PSNR: {psnr_sum/n:.2f} dB")
-print(f"Avg SSIM: {ssim_sum/n:.4f}")
+# Calculate average MSE, PSNR, and SSIM
+avg_mse = mse_sum / n
+avg_psnr = psnr_sum / n
+avg_ssim = ssim_sum / n
+
+print(f"Avg MSE: {avg_mse:.6f}")
+print(f"Avg PSNR: {avg_psnr:.2f} dB")
+print(f"Avg SSIM: {avg_ssim:.4f}")
