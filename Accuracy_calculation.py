@@ -4,63 +4,59 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 from skimage.metrics import structural_similarity as compare_ssim
-from dataset import HazeDataset
+
+from dataset import HazeDataset         # must return (hazy, clean)
 from INet.models.dehazeformer import DehazeFormer
 
-# Hyperparameters
+# 1. Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-lr = 1e-6
-batch_size = 8
 
-# Load the dataset
+# 2. Data transforms & loader
 transform = transforms.Compose([
     transforms.Resize((128, 128)),
     transforms.ToTensor()
 ])
 
-# Load your training dataset (use the correct path)
-dataset = HazeDataset(folder_path="../Gamma_Estimation/data/simu/", transform=transform)
-train_dl = DataLoader(dataset, batch_size=batch_size, shuffle=False)  # No shuffle for testing
+# Make sure your dataset __getitem__ returns (hazy_tensor, clean_tensor)
+test_ds = HazeDataset(folder_path="../Gamma_Estimation/data/simu/", transform=transform)
+test_dl = DataLoader(test_ds, batch_size=1, shuffle=False)
 
-# Load the saved model
-checkpoint_path = "//home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_2100.pth"  # Path to your final model checkpoint
-checkpoint = torch.load(checkpoint_path, map_location=device)
-model = DehazeFormer().to(device)  # Initialize the model
+# 3. Load your trained model
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_2100.pth"
+ckpt = torch.load(checkpoint_path, map_location=device)
 
-# Load the model state dict
-model.load_state_dict(checkpoint['model_state_dict'])
-model.eval()  # Set the model to evaluation mode
+model = DehazeFormer().to(device)
+model.load_state_dict(ckpt["model_state_dict"])
+model.eval()
 
-# Define loss and accuracy calculation
-psnr_sum = 0
-ssim_sum = 0
-n = len(train_dl)  # Total number of batches
+# 4. Accumulators
+psnr_total = 0.0
+ssim_total = 0.0
+count = 0
 
-# Compute loss and accuracy for training data
+# 5. Loop & compute
 with torch.no_grad():
-    for hazy, clean in train_dl:
+    for hazy, clean in test_dl:
         hazy = hazy.to(device)
         clean = clean.to(device)
 
-        # Forward pass
-        output = model(hazy)
+        # forward
+        output = model(hazy).clamp(0, 1)
 
-        # Convert output and clean to numpy arrays for evaluation
-        output_np = output.squeeze(0).cpu().permute(1, 2, 0).numpy()
-        clean_np = clean.squeeze(0).cpu().permute(1, 2, 0).numpy()
+        # to numpy HWC
+        out_np   = output[0].cpu().permute(1, 2, 0).numpy()
+        clean_np = clean[0].cpu().permute(1, 2, 0).numpy()
 
-        # PSNR
-        psnr = compare_psnr(clean_np, output_np, data_range=1.0)
-        # SSIM (multichannel=True for color)
-        ssim = compare_ssim(clean_np, output_np, data_range=1.0, multichannel=True)
+        psnr = compare_psnr(clean_np, out_np, data_range=1.0)
+        ssim = compare_ssim(clean_np, out_np, data_range=1.0, multichannel=True)
 
-        mse_sum += mse
-        psnr_sum += psnr
-        ssim_sum += ssim
+        psnr_total += psnr
+        ssim_total += ssim
+        count += 1
 
-# Calculate average MSE, PSNR, and SSIM
-avg_psnr = psnr_sum / n
-avg_ssim = ssim_sum / n
+# 6. Report
+avg_psnr = psnr_total / count
+avg_ssim = ssim_total / count
 
-print(f"Avg PSNR: {avg_psnr:.2f} dB")
-print(f"Avg SSIM: {avg_ssim:.4f}")
+print(f"Average PSNR: {avg_psnr:.2f} dB")
+print(f"Average SSIM: {avg_ssim:.4f}")
