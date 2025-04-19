@@ -4,8 +4,8 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 from skimage.metrics import structural_similarity as compare_ssim
-from dataset import HazeDataset  # Assuming you have a dataset class
-from model import DehazeFormer  # Assuming the model class
+from dataset import HazeDataset
+from INet.models.dehazeformer import DehazeFormer
 
 # Hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
