@@ -57,9 +57,9 @@ def estimate_atmospheric_light(hazy_img):
 # Hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('GPU: ', device)
-lr = 1e-6
+lr = 1e-3
 batch_size = 8
-epochs = 2500
+epochs = 200
 
 # Data preparation
 transform = transforms.Compose([
@@ -68,7 +68,7 @@ transform = transforms.Compose([
 ])
 print('transform function loaded')
 
-dataset = HazeDataset(folder_path="../Gamma_Estimation/data/simu/", transform=transform)
+dataset = HazeDataset(folder_path="../Datasets/Combined_Dataset_Train/", transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)  # Better to shuffle for training
 print('Data Loader Loaded')
 
@@ -80,11 +80,11 @@ print('HazeNet loaded')
 
 # Initialize DehazeFormer and optimizer
 i_net = DehazeFormer().to(device)
-optimizer = torch.optim.SGD(i_net.parameters(), lr)
+optimizer = torch.optim.Adam(i_net.parameters(), lr)
 start_epoch = 0
 
 # Check for existing checkpoint to resume training
-checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_2100.pth" # Path to latest checkpoint
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_epoch_0.pth" # Path to latest checkpoint
 if os.path.exists(checkpoint_path):
     print("Loading checkpoint to resume training...")
     checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -138,7 +138,7 @@ for epoch in range(start_epoch, epochs):
 
     # Save checkpoint every 100 epochs and at the end
     if (epoch + 1) % 100 == 0 or (epoch + 1) == epochs:
-        model_path = f"dehazeformer_trained_epoch_{epoch + 1}_ssim.pth"
+        model_path = f"combined_dataset_model_epoch_{epoch + 1}_ssim.pth"
         torch.save({
             'epoch': epoch,
             'model_state_dict': i_net.state_dict(),
@@ -148,7 +148,7 @@ for epoch in range(start_epoch, epochs):
         print(f"Checkpoint saved to {model_path}")
 
 # Final save
-final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_2500_ssim.pth"
+final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_trained_ssim_200_1e-3.pth"
 torch.save({
     'epoch': epochs - 1,
     'model_state_dict': i_net.state_dict(),
