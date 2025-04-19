@@ -5,8 +5,6 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import numpy as np
-#from model import HazeNet, INet
-from dataset import HazeDataset
 from pytorch_msssim import ssim
 from Statistical_Transmission.bounding_fun import bounding_function
 from Gamma_Estimation.cnn_beta_estimator2 import BetaCNN
@@ -57,7 +55,7 @@ def estimate_atmospheric_light(hazy_img):
 # Hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('GPU: ', device)
-lr = 1e-4  # It's common to use a slightly higher learning rate with Adam
+lr = 1e-6
 batch_size = 8
 epochs = 2500
 
@@ -78,13 +76,13 @@ haze_net.load_state_dict(torch.load("../Gamma_Estimation/beta_cnn.pth"))
 haze_net.eval()
 print('HazeNet loaded')
 
-# Initialize DehazeFormer and optimizer - NOW USING ADAM
+# Initialize DehazeFormer and optimizer
 i_net = DehazeFormer().to(device)
-optimizer = torch.optim.Adam(i_net.parameters(), lr=lr)
+optimizer = torch.optim.SGD(i_net.parameters(), lr)
 start_epoch = 0
 
 # Check for existing checkpoint to resume training
-checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_2100.pth" # Path to latest checkpoint (assuming you ran the SSIM-only training)
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_2100.pth" # Path to latest checkpoint
 if os.path.exists(checkpoint_path):
     print("Loading checkpoint to resume training...")
     checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -138,7 +136,7 @@ for epoch in range(start_epoch, epochs):
 
     # Save checkpoint every 100 epochs and at the end
     if (epoch + 1) % 100 == 0 or (epoch + 1) == epochs:
-        model_path = f"dehazeformer_trained_epoch_{epoch + 1}_ssim_adam.pth"
+        model_path = f"dehazeformer_trained_epoch_{epoch + 1}_ssim.pth"
         torch.save({
             'epoch': epoch,
             'model_state_dict': i_net.state_dict(),
@@ -148,7 +146,7 @@ for epoch in range(start_epoch, epochs):
         print(f"Checkpoint saved to {model_path}")
 
 # Final save
-final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_2500_ssim_adam.pth"
+final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_2500_ssim.pth"
 torch.save({
     'epoch': epochs - 1,
     'model_state_dict': i_net.state_dict(),
