@@ -1,0 +1,41 @@
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from dataset import HazeDataset
+import numpy as np
+from skimage.metrics import peak_signal_noise_ratio as compare_psnr
+from skimage.metrics import structural_similarity as compare_ssim
+
+# create a DataLoader for your test set
+test_ds = HazeDataset(folder_path="path/to/test/", transform=transforms.Compose([transforms.Resize((128,128)), transforms.ToTensor()]))
+test_dl = DataLoader(test_ds, batch_size=1, shuffle=False)
+
+mse_sum = 0.0
+psnr_sum = 0.0
+ssim_sum = 0.0
+n = len(test_dl)
+
+with torch.no_grad():
+    for hazy, clean in test_dl:
+        hazy = hazy.to(device)
+        clean = clean.to(device)
+
+        pred = model(hazy).clamp(0,1)
+
+        # move to CPU numpy HWC [0,1]
+        pred_np  = pred.squeeze(0).cpu().permute(1,2,0).numpy()
+        clean_np = clean.squeeze(0).cpu().permute(1,2,0).numpy()
+
+        # MSE
+        mse = np.mean((pred_np - clean_np)**2)
+        # PSNR
+        psnr = compare_psnr(clean_np, pred_np, data_range=1.0)
+        # SSIM (multichannel=True for color)
+        ssim = compare_ssim(clean_np, pred_np, data_range=1.0, multichannel=True)
+
+        mse_sum  += mse
+        psnr_sum += psnr
+        ssim_sum += ssim
+
+print(f"Avg MSE : {mse_sum/n:.6f}")
+print(f"Avg PSNR: {psnr_sum/n:.2f} dB")
+print(f"Avg SSIM: {ssim_sum/n:.4f}")
