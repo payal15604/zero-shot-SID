@@ -82,7 +82,7 @@ optimizer = torch.optim.Adam(i_net.parameters(), lr=lr)
 start_epoch = 0
 
 # Check for existing checkpoint to resume training
-checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_2100_ssim.pth" # Path to latest checkpoint (assuming you ran the SSIM-only training)
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/dehazeformer_trained_epoch_2100.pth" # Path to latest checkpoint (assuming you ran the SSIM-only training)
 if os.path.exists(checkpoint_path):
     print("Loading checkpoint to resume training...")
     checkpoint = torch.load(checkpoint_path, map_location=device)
