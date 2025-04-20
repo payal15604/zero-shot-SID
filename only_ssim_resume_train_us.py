@@ -109,29 +109,36 @@ criterion = lambda img1, img2: 1 - ssim(img1, img2, data_range=1.0, size_average
 
 for epoch in range(start_epoch, epochs):
     epoch_loss = 0
-    print(f"Epoch: {epoch + 1} of {epochs}")
+    total_images = len(dataset)
+    print(f"\nEpoch: {epoch + 1} of {epochs}")
 
-    for idx, hazy_img in enumerate(dataloader):
-        hazy_img = hazy_img.to(device)
+    with tqdm(total=total_images, desc=f"Epoch {epoch+1}", unit="img") as pbar:
+        for idx, hazy_img in enumerate(dataloader):
+            hazy_img = hazy_img.to(device)
 
-        with torch.no_grad():
-            gamma = haze_net(hazy_img)
-            transmission = compute_transmission(hazy_img, device)
-            t_power_gamma = torch.pow(transmission, gamma.view(-1, 1, 1, 1))
-            A = estimate_atmospheric_light(hazy_img).squeeze().view(-1, 3, 1, 1) / 255
+            with torch.no_grad():
+                gamma = haze_net(hazy_img)
+                transmission = compute_transmission(hazy_img, device)
+                t_power_gamma = torch.pow(transmission, gamma.view(-1, 1, 1, 1))
+                A = estimate_atmospheric_light(hazy_img).squeeze().view(-1, 3, 1, 1) / 255
 
-        J_haze_free = i_net(hazy_img)
-        reconstructed_hazy = A * (1 - t_power_gamma) + t_power_gamma * J_haze_free
-        reconstructed_hazy = torch.clamp(reconstructed_hazy, 0, 1)
+            J_haze_free = i_net(hazy_img)
+            reconstructed_hazy = A * (1 - t_power_gamma) + t_power_gamma * J_haze_free
+            reconstructed_hazy = torch.clamp(reconstructed_hazy, 0, 1)
 
-        # Calculate loss - now only SSIM loss
-        loss = criterion(reconstructed_hazy, hazy_img)
-        epoch_loss += loss.item()
+            loss = criterion(reconstructed_hazy, hazy_img)
+            epoch_loss += loss.item()
 
-        optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(i_net.parameters(), max_norm=1.0)
-        optimizer.step()
+            optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(i_net.parameters(), max_norm=1.0)
+            optimizer.step()
+
+            # Update progress bar and print count
+            processed_images = (idx + 1) * batch_size
+            processed_images = min(processed_images, total_images)
+            pbar.update(hazy_img.size(0))
+            pbar.set_postfix({'Loss': f'{loss.item():.4f}', 'Processed': f'{processed_images}/{total_images}'})
 
     avg_loss = epoch_loss / len(dataloader)
     print(f"Epoch [{epoch+1}/{epochs}], Loss (SSIM): {avg_loss:.4f}")
