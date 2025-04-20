@@ -6,12 +6,12 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import numpy as np
-from model import HazeNet, INet
+
 from dataset import HazeDataset
 from pytorch_msssim import ssim
 from Statistical_Transmission.bounding_fun import bounding_function
 from Gamma_Estimation.cnn_beta_estimator2 import BetaCNN
-from utils import DarkChannel, AtmLight  # Import utility functions
+from utils import DarkChannel, AtmLight
 from INet.models.dehazeformer import DehazeFormer
 
 def compute_transmission(hazy_img, device):
