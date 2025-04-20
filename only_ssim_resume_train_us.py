@@ -1,5 +1,6 @@
 import torch
 import os
+from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
