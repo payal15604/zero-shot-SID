@@ -16,19 +16,19 @@ from INet.models.dehazeformer import DehazeFormer
 
 class GammaAgent(nn.Module):
     def __init__(self):
-        super().__init__()
+        super(GammaAgent, self).__init__()
         self.net = nn.Sequential(
             nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
             nn.Linear(16, 1),
-            nn.Sigmoid()      # outputs in [0, 1]
+            nn.Sigmoid()  # To keep gamma between 0 and 1
         )
 
     def forward(self, x):
-        # returns shape (B,1,1,1) with values in [0,2]
-        return self.net(x).view(-1,1,1,1) * 2.0
+        return self.net(x) * 2.0  # Now gamma is in [0, 2]
+
 
 
 def compute_transmission(hazy_img, device):
@@ -75,7 +75,7 @@ def estimate_atmospheric_light(hazy_img):
     
 # Function to reduce LR manually
 def adjust_learning_rate(optimizer, epoch, lr_schedule_epoch=20, lr_decay=0.1):
-    """Reduce learning rate by a factor every `lr_schedule_epoch` epochs."""
+    """Reduce learning rate by a factor every lr_schedule_epoch epochs."""
     if (epoch + 1) % lr_schedule_epoch == 0:
         for param_group in optimizer.param_groups:
             param_group['lr'] *= lr_decay
@@ -85,8 +85,7 @@ def adjust_learning_rate(optimizer, epoch, lr_schedule_epoch=20, lr_decay=0.1):
 # Hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('GPU: ', device)
-lr_dehaze = 1e-3
-lr_agent = 1e-4
+lr = 1e-3
 batch_size = 8
 epochs = 50
 
@@ -115,23 +114,16 @@ optimizer_haze_net = torch.optim.Adam(haze_net.parameters(), 0.1)
 start_epoch = 0
 
 # Check for existing checkpoint to resume training
-checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model_22_April_morning_gamma.pth" # Path to latest checkpoint
-
-# if os.path.exists(checkpoint_path):
-#     print("Loading checkpoint to resume training...")
-#     checkpoint = torch.load(checkpoint_path, map_location=device)
-#     i_net.load_state_dict(checkpoint['model_state_dict'])
-#     optimizer_i_net.load_state_dict(checkpoint['optimizer_state_dict'])
-#     start_epoch = checkpoint['epoch'] + 1
-#     print(f"Resuming training from epoch {start_epoch}")
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21_April_evening_gamma.pth" # Path to latest checkpoint
 if os.path.exists(checkpoint_path):
-    checkpoint = torch.load(checkpoint_path)
+    print("Loading checkpoint to resume training...")
+    checkpoint = torch.load(checkpoint_path, map_location=device)
     i_net.load_state_dict(checkpoint['i_net_state'])
     gamma_agent.load_state_dict(checkpoint['agent_state'])
     optimizer_i_net.load_state_dict(checkpoint['opt_i_state'])
     optimizer_agent.load_state_dict(checkpoint['opt_agent_state'])
     start_epoch = checkpoint['epoch'] + 1
-    print(f"Checkpoint loaded, resuming from epoch {start_epoch}")
+    print(f"Resuming training from epoch {start_epoch}")
 else:
     # Load initial pretrained weights if no checkpoint found
     initial_checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/INet/models/dehazeformer-t.pth"
@@ -183,90 +175,96 @@ max_gamma = 0
 gamma_agent = GammaAgent().to(device)
 optimizer_agent = optim.Adam(gamma_agent.parameters(), lr=1e-4)
 
-for ep in range(start_epoch, epochs):
-    running_loss = 0.0
-    i_net.train(); gamma_agent.train()
+for epoch in range(start_epoch, epochs):
+    epoch_loss = 0
+    total_images = len(dataset)
+    print(f"\nEpoch: {epoch + 1} of {epochs}")
 
-    loop = tqdm(dataloader, desc=f"[Epoch {ep+1}/{epochs}]", unit="img")
-    for hazy in loop:
-        hazy = hazy.to(device)
+    with tqdm(total=total_images, desc=f"Epoch {epoch+1}", unit="img") as pbar:
+        for idx, hazy_img in enumerate(dataloader):
+            hazy_img = hazy_img.to(device)
+            if (epoch == 0):
+                gamma = torch.tensor(1.0).view(-1, 1, 1, 1).to(device)
+            else:
+                gamma = gamma_agent(hazy_img).view(-1, 1, 1, 1)
 
-        # → γ_est: shape (B,1,1,1)
-        if ep == 0:
-            gamma = torch.ones(hazy.size(0),1,1,1, device=device)
-        else:
-            gamma = gamma_agent(hazy)
+            gamma = gamma_agent(hazy_img).view(-1, 1, 1, 1)   # → shape (B,1,1,1)
 
-        # transmission & A
-        t = compute_transmission(hazy, device)       # (B,1,H,W)
-        A = estimate_atmospheric_light(hazy)         # (B,3,1,1)
+            print(f"Gamma at epoch {epoch + 1}: {gamma.item():.6f}")
 
-        # dehazed output
-        J = torch.clamp(i_net(hazy), 0, 1)
+            transmission = compute_transmission(hazy_img, device)
+                
+            print(f"Before gamma application: {transmission.shape}")
+            t_power_gamma = transmission.pow(gamma)
+            print(f"After gamma application: {t_power_gamma.shape}")
 
-        # reconstruct hazy
-        ty = t.pow(gamma)                            # broadcast γ per image
-        rec = A * (1 - ty) + ty * J
-        rec = torch.clamp(rec, 0, 1)
+            A = estimate_atmospheric_light(hazy_img).squeeze().view(-1, 3, 1, 1) / 255
+            print(f"gamma shape: {gamma.shape}")
+            print(f"transmission shape: {transmission.shape}")
 
-        # loss
-        Lmse  = criterion_mse(rec, hazy)
-        Lssim = criterion_ssim(rec, hazy)
-        loss  = 0.5*(Lmse + Lssim)
 
-        # backward
-        opt_i.zero_grad(); opt_agent.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(i_net.parameters(), 1.0)
-        torch.nn.utils.clip_grad_norm_(gamma_agent.parameters(), 1.0)
-        opt_i.step(); opt_agent.step()
+            J_haze_free = i_net(hazy_img)
+            J_haze_free = torch.clamp(J_haze_free, 0, 1)
+            #print(J_haze_free)
+                  
+            display_image_opencv(J_haze_free, title=f"Dehazed Image Epoch {epoch+1}, Batch {idx+1}", target_size=(256, 256))
 
-        running_loss += loss.item()
-        loop.set_postfix(loss=running_loss/(loop.n+1))
+     
+            
+            reconstructed_hazy = A * (1 - t_power_gamma) + t_power_gamma * J_haze_free
+            reconstructed_hazy = torch.clamp(reconstructed_hazy, 0, 1)
 
-    avg_loss = running_loss / len(dataloader)
-    print(f"Epoch {ep+1} completed. Avg Loss = {avg_loss:.4f}")
+            loss_mse = criterion_mse(reconstructed_hazy, hazy_img)
+            
+            #SSIM loss for BetaCNN (update only BetaCNN)
+            loss_ssim = criterion_ssim(reconstructed_hazy, hazy_img)
+            combine_loss=(loss_mse+loss_ssim) / 2
+         
+            epoch_loss += combine_loss.item()
 
-    # adjust LR
-    adjust_learning_rate(opt_i, ep)
+            optimizer_i_net.zero_grad()
+            optimizer_agent.zero_grad()
+            combine_loss.backward()
+            torch.nn.utils.clip_grad_norm_(i_net.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(gamma_agent.parameters(), max_norm=1.0)
+            optimizer_i_net.step()
+            optimizer_agent.step()
 
-    # save every 10 epochs + final
-    if (ep+1) % 10 == 0 or (ep+1) == epochs:
-        checkpoint = {
-            'epoch':        ep,
-            'i_net_state':  i_net.state_dict(),
-            'agent_state':  gamma_agent.state_dict(),
-            'opt_i_state':  opt_i.state_dict(),
-            'opt_agent_state': opt_agent.state_dict(),
-            'loss':         avg_loss
-        }
-        torch.save(checkpoint, checkpoint_path)
-        print(f"  → checkpoint saved at epoch {ep+1}")
 
-print("Training done.")
+            # Update progress bar and print count
+            processed_images = (idx + 1) * batch_size
+            processed_images = min(processed_images, total_images)
+            pbar.update(hazy_img.size(0))
+            pbar.set_postfix({'Loss': f'{combine_loss.item():.4f}', 'Processed': f'{processed_images}/{total_images}'})
 
-save_dir = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/saved_images"
-os.makedirs(save_dir, exist_ok=True)
+    avg_loss = epoch_loss / len(dataloader)
+    print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
+    
+    adjust_learning_rate(optimizer_i_net, epoch)
+    #adjust_learning_rate(optimizer_haze_net, epoch, 20, 0.1)
 
-i_net.eval()
-with torch.no_grad():
-    idx_global = 0
-    for hazy in tqdm(dataloader, desc="Saving images"):
-        hazy = hazy.to(device)
-        J = torch.clamp(i_net(hazy), 0, 1)
-        for b in range(hazy.size(0)):
-            filename = f"dehazed_{idx_global:04d}.png"
-            vutils.save_image(J[b], os.path.join(save_dir, filename))
-            idx_global += 1
-
-print(f"All dehazed images saved to {save_dir}")
+    # Save checkpoint every 100 epochs and at the end
+    if (epoch + 1) % 10 == 0 or (epoch + 1) == epochs:
+        model_path = f"/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21April_evening_epoch_{epoch + 1}_ssim.pth"
+        torch.save({
+            'epoch':           epoch,
+            'i_net_state':     i_net.state_dict(),
+            'agent_state':     gamma_agent.state_dict(),
+            'opt_i_state':     optimizer_i_net.state_dict(),
+            'opt_agent_state': optimizer_agent.state_dict(),
+            'loss':            avg_loss,
+        },model_path)
+        print(f"Checkpoint saved to {model_path}")
 
 # Final save
-final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model_23_April_morning_gamma.pth"
+
+final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21April_evening_gamma.pth"
 torch.save({
-    'epoch': epochs - 1,
-    'model_state_dict': i_net.state_dict(),
-    'optimizer_state_dict': optimizer_i_net.state_dict(),
-    'loss': avg_loss,
+    'epoch':           epoch,
+    'i_net_state':     i_net.state_dict(),
+    'agent_state':     gamma_agent.state_dict(),
+    'opt_i_state':     optimizer_i_net.state_dict(),
+    'opt_agent_state': optimizer_agent.state_dict(),
+    'loss':            avg_loss,
 }, final_model_path)
 print(f"Final model saved to {final_model_path}")
