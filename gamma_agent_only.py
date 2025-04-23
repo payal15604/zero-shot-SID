@@ -210,7 +210,7 @@ for epoch in range(start_epoch, epochs):
             J_haze_free = torch.clamp(J_haze_free, 0, 1)
             #print(J_haze_free)
                   
-            display_image_opencv(J_haze_free, title=f"Dehazed Image Epoch {epoch+1}, Batch {idx+1}", target_size=(256, 256))
+            # display_image_opencv(J_haze_free, title=f"Dehazed Image Epoch {epoch+1}, Batch {idx+1}", target_size=(256, 256))
 
      
             
