@@ -14,6 +14,23 @@ from Gamma_Estimation.cnn_beta_estimator2 import BetaCNN
 from utils import DarkChannel, AtmLight  # Import utility functions
 from INet.models.dehazeformer import DehazeFormer
 
+class GammaAgent(nn.Module):
+    def __init__(self):
+        super(GammaAgent, self).__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(16, 1),
+            nn.Sigmoid()  # To keep gamma between 0 and 1
+        )
+
+    def forward(self, x):
+        return self.net(x) * 2.0  # Now gamma is in [0, 2]
+
+
+
 def compute_transmission(hazy_img, device):
     """Compute transmission for a batch of images."""
     batch_size = hazy_img.shape[0]
@@ -97,7 +114,7 @@ optimizer_haze_net = torch.optim.Adam(haze_net.parameters(), 0.1)
 start_epoch = 0
 
 # Check for existing checkpoint to resume training
-checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21Aprilmorning_gamma.pth" # Path to latest checkpoint
+checkpoint_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21_April_evening_gamma.pth" # Path to latest checkpoint
 if os.path.exists(checkpoint_path):
     print("Loading checkpoint to resume training...")
     checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -153,6 +170,9 @@ i_net.train()
 criterion_mse = lambda img1, img2:nn.MSELoss()(img1, img2)
 criterion_ssim = lambda img1, img2: 1 - ssim(img1, img2, data_range=1.0, size_average=True)
 max_gamma = 0
+gamma_agent = GammaAgent().to(device)
+optimizer_agent = optim.Adam(gamma_agent.parameters(), lr=1e-4)
+
 for epoch in range(start_epoch, epochs):
     epoch_loss = 0
     total_images = len(dataset)
@@ -161,32 +181,23 @@ for epoch in range(start_epoch, epochs):
     with tqdm(total=total_images, desc=f"Epoch {epoch+1}", unit="img") as pbar:
         for idx, hazy_img in enumerate(dataloader):
             hazy_img = hazy_img.to(device)
+            if (epoch == 0):
+            	gamma = torch.tensor(1.0).view(-1, 1, 1, 1).to(device)
+            else:
+            	gamma = gamma_agent(hazy_img).view(-1, 1, 1, 1)
 
-            with torch.no_grad():
-                if epoch == 0:
-                    # Initial gamma value at epoch 0 (0.1)
-                    gamma = torch.tensor([1.0], dtype=torch.float32, requires_grad=True, device=device)  # (B,)
-                else:
-                    # For subsequent epochs, compute gamma and clamp it between 0 and 2
-                    #gamma = haze_net(reconstructed_hazy)  # Assume output of haze_net is in a reasonable range
-                    gamma = torch.tensor([1.0], dtype=torch.float32, requires_grad=True, device=device)  # (B,)
-                    #gamma = torch.clamp(gamma, 0, 2)  # Clamping gamma to the range [0, 2]
-                # max_gamma = torch.max(max_gamma, gamma.max())  # Keep it as a tensor
-  # Get the scalar value of the max
-                #max_gamma = max(gamma.max().item(), max_gamma)
-                #print(f"Max Gamma at epoch {epoch + 1}: {gamma.max()}")
-                #gamma = gamma / max_gamma
-                
-                print(f"Gamma at epoch {epoch + 1}: {gamma.item():.6f}")
-                transmission = compute_transmission(hazy_img, device)
-                
-                print(f"Before gamma application: {transmission.shape}")
-                t_power_gamma = torch.pow(transmission, gamma.view(1, 1, 1, 1))
-                print(f"After gamma application: {t_power_gamma.shape}")
 
-                A = estimate_atmospheric_light(hazy_img).squeeze().view(-1, 3, 1, 1) / 255
-                print(f"gamma shape: {gamma.shape}")
-                print(f"transmission shape: {transmission.shape}")
+                
+            print(f"Gamma at epoch {epoch + 1}: {gamma.item():.6f}")
+            transmission = compute_transmission(hazy_img, device)
+                
+            print(f"Before gamma application: {transmission.shape}")
+            t_power_gamma = torch.pow(transmission, gamma.view(1, 1, 1, 1))
+            print(f"After gamma application: {t_power_gamma.shape}")
+
+            A = estimate_atmospheric_light(hazy_img).squeeze().view(-1, 3, 1, 1) / 255
+            print(f"gamma shape: {gamma.shape}")
+            print(f"transmission shape: {transmission.shape}")
 
 
             J_haze_free = i_net(hazy_img)
@@ -202,19 +213,20 @@ for epoch in range(start_epoch, epochs):
 
             loss_mse = criterion_mse(reconstructed_hazy, hazy_img)
             
-            # SSIM loss for BetaCNN (update only BetaCNN)
+            #SSIM loss for BetaCNN (update only BetaCNN)
             loss_ssim = criterion_ssim(reconstructed_hazy, hazy_img)
-            combine_loss=(loss_mse+loss_ssim)
+            combine_loss=(loss_mse+loss_ssim) / 2
          
             epoch_loss += combine_loss.item()
 
             optimizer_i_net.zero_grad()
-            optimizer_haze_net.zero_grad()
+            optimizer_agent.zero_grad()
             combine_loss.backward()
             torch.nn.utils.clip_grad_norm_(i_net.parameters(), max_norm=1.0)
-            torch.nn.utils.clip_grad_norm_(haze_net.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(gamma_agent.parameters(), max_norm=1.0)
             optimizer_i_net.step()
-            optimizer_haze_net.step()
+            optimizer_agent.step()
+
 
             # Update progress bar and print count
             processed_images = (idx + 1) * batch_size
@@ -223,14 +235,14 @@ for epoch in range(start_epoch, epochs):
             pbar.set_postfix({'Loss': f'{combine_loss.item():.4f}', 'Processed': f'{processed_images}/{total_images}'})
 
     avg_loss = epoch_loss / len(dataloader)
-    print(f"Epoch [{epoch+1}/{epochs}], Loss (SSIM): {avg_loss:.4f}")
+    print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
     
     adjust_learning_rate(optimizer_i_net, epoch)
     #adjust_learning_rate(optimizer_haze_net, epoch, 20, 0.1)
 
     # Save checkpoint every 100 epochs and at the end
     if (epoch + 1) % 10 == 0 or (epoch + 1) == epochs:
-        model_path = f"/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21Aprilmorning_epoch_{epoch + 1}_ssim.pth"
+        model_path = f"/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21April_evening_epoch_{epoch + 1}_ssim.pth"
         torch.save({
             'epoch': epoch,
             'model_state_dict': i_net.state_dict(),
@@ -240,7 +252,7 @@ for epoch in range(start_epoch, epochs):
         print(f"Checkpoint saved to {model_path}")
 
 # Final save
-final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21Aprilmorning_gamma.pth"
+final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21April_evening_gamma.pth"
 torch.save({
     'epoch': epochs - 1,
     'model_state_dict': i_net.state_dict(),
