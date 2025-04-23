@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
+import torchvision.utils as vutils
 import numpy as np
 #from model import HazeNet, INet
 from dataset import HazeDataset
@@ -133,7 +134,9 @@ else:
     else:
         i_net.load_state_dict(checkpoint, strict=False)
     print("Initial model weights loaded")
-
+    
+save_img_dir = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/saved_images"
+os.makedirs(save_img_dir, exist_ok=True)
 import cv2
 
 import cv2
@@ -245,7 +248,7 @@ for epoch in range(start_epoch, epochs):
 
     # Save checkpoint every 100 epochs and at the end
     if (epoch + 1) % 10 == 0 or (epoch + 1) == epochs:
-        model_path = f"/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21April_evening_epoch_{epoch + 1}_ssim.pth"
+        model_path = f"/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model_23_April_morning_epoch_{epoch + 1}_ssim.pth"
         torch.save({
             'epoch':           epoch,
             'i_net_state':     i_net.state_dict(),
@@ -255,10 +258,23 @@ for epoch in range(start_epoch, epochs):
             'loss':            avg_loss,
         },model_path)
         print(f"Checkpoint saved to {model_path}")
+        with torch.no_grad():
+            for img_i in range(J_haze_free.size(0)):
+                out_path = os.path.join(
+                    save_img_dir,
+                    f"epoch{epoch+1}_img{img_i}.png"
+                )
+                vutils.save_image(
+                    J_haze_free[img_i],
+                    out_path,
+                    normalize=True,
+                    scale_each=True
+                )
+        print(f"  → Saved sample images to {save_img_dir}")
 
 # Final save
 
-final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model21April_evening_gamma.pth"
+final_model_path = "/home/student1/Desktop/Zero_Shot/zero-shot-SID/Saved_Models/combined_dataset_model_23_April_morning_gamma.pth"
 torch.save({
     'epoch':           epoch,
     'i_net_state':     i_net.state_dict(),
