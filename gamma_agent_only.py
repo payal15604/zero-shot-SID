@@ -186,14 +186,14 @@ for epoch in range(start_epoch, epochs):
     with tqdm(total=total_images, desc=f"Epoch {epoch+1}", unit="img") as pbar:
         for idx, hazy_img in enumerate(dataloader):
             hazy_img = hazy_img.to(device)
-            if (epoch == 0):
-                gamma = torch.tensor(1.0).view(-1, 1, 1, 1).to(device)
-            else:
-                gamma = gamma_agent(hazy_img).view(-1, 1, 1, 1)
+            # if (epoch == 0):
+            #     gamma = torch.tensor(1.0).view(-1, 1, 1, 1).to(device)
+            # else:
+            #     gamma = gamma_agent(hazy_img).view(-1, 1, 1, 1)
 
             gamma = gamma_agent(hazy_img).view(-1, 1, 1, 1)   # → shape (B,1,1,1)
 
-            print(f"Gamma at epoch {epoch + 1}: {gamma.item():.6f}")
+            print(f"Gamma[0] at epoch {epoch+1}: {gamma[0].item():.4f}")
 
             transmission = compute_transmission(hazy_img, device)
                 
