@@ -197,13 +197,13 @@ for epoch in range(start_epoch, epochs):
 
             transmission = compute_transmission(hazy_img, device)
                 
-            print(f"Before gamma application: {transmission.shape}")
+            # print(f"Before gamma application: {transmission.shape}")
             t_power_gamma = transmission.pow(gamma)
-            print(f"After gamma application: {t_power_gamma.shape}")
+            # print(f"After gamma application: {t_power_gamma.shape}")
 
             A = estimate_atmospheric_light(hazy_img).squeeze().view(-1, 3, 1, 1) / 255
-            print(f"gamma shape: {gamma.shape}")
-            print(f"transmission shape: {transmission.shape}")
+            # print(f"gamma shape: {gamma.shape}")
+            # print(f"transmission shape: {transmission.shape}")
 
 
             J_haze_free = i_net(hazy_img)
